@@ -14,8 +14,10 @@
 #import "TMWebViewController.h"
 #import "TMSDKConstants.h"
 
+
 #if __IPHONE_OS_VERSION_MIN_REQUIRED
 #import <UIKit/UIKit.h>
+@import SafariServices;
 #else
 #import <AppKit/AppKit.h>
 #endif
@@ -106,8 +108,7 @@ NSDictionary *formEncodedDataToDictionary(NSData *data);
 
 - (void)authenticate:(NSString *)URLScheme fromViewController:(UIViewController *)fromViewController callback:(TMAuthenticationCallback)callback {
     [self authenticate:URLScheme handleAuthURL:^(NSURL *authURL) {
-        Class SFSafariViewControllerClass = NSClassFromString(@"SFSafariViewController");
-        UIViewController *authController = [[SFSafariViewControllerClass alloc] initWithURL:authURL];
+        SFSafariViewController *authController = [[SFSafariViewController alloc] initWithURL:authURL];
         authController.modalPresentationStyle = UIModalPresentationOverFullScreen;
         [authController performSelector:@selector(setDelegate:) withObject:self];
         
