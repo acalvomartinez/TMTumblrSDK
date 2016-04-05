@@ -107,16 +107,10 @@ NSDictionary *formEncodedDataToDictionary(NSData *data);
 - (void)authenticate:(NSString *)URLScheme fromViewController:(UIViewController *)fromViewController callback:(TMAuthenticationCallback)callback {
     [self authenticate:URLScheme handleAuthURL:^(NSURL *authURL) {
         Class SFSafariViewControllerClass = NSClassFromString(@"SFSafariViewController");
-        UIViewController *authController;
-        if (SFSafariViewControllerClass) {
-            authController = [[SFSafariViewControllerClass alloc] initWithURL:authURL];
-            authController.modalPresentationStyle = UIModalPresentationOverFullScreen;
-            [authController performSelector:@selector(setDelegate:) withObject:self];
-        } else {
-            TMWebViewController *controller = [[TMWebViewController alloc] initWithURL:authURL];
-            controller.delegate = self;
-            authController = [[UINavigationController alloc] initWithRootViewController:controller];
-        }
+        UIViewController *authController = [[SFSafariViewControllerClass alloc] initWithURL:authURL];
+        authController.modalPresentationStyle = UIModalPresentationOverFullScreen;
+        [authController performSelector:@selector(setDelegate:) withObject:self];
+        
         [fromViewController presentViewController:authController animated:YES completion:NULL];
     } authCallback:^(NSString *token, NSString *secret, NSError *error) {
         dispatch_block_t performCallback = ^{
