@@ -23,7 +23,7 @@
 #endif
 
 typedef void (^NSURLConnectionCompletionHandler)(NSURLResponse *, NSData *, NSError *);
-typedef void (^TMHandleAuthenticationURLCallback)(NSURL *authURL);
+typedef void (^TMHandleAuthenticationURLCallback)(NSString *oauthToken);
 
 @interface TMTumblrAuthenticator() <TMWebViewControllerDelegate>
 
@@ -50,7 +50,6 @@ NSDictionary *formEncodedDataToDictionary(NSData *data);
 - (void)authenticate:(NSString *)URLScheme
        handleAuthURL:(TMHandleAuthenticationURLCallback)handleAuthURLBlock
         authCallback:(TMAuthenticationCallback)callback {
-
     // Clear token secret in case authentication was previously started but not finished
     self.threeLeggedOAuthTokenSecret = nil;
     
@@ -78,11 +77,7 @@ NSDictionary *formEncodedDataToDictionary(NSData *data);
             NSDictionary *responseParameters = formEncodedDataToDictionary(data);
             self.threeLeggedOAuthTokenSecret = responseParameters[@"oauth_token_secret"];
             
-            NSURL *authURL = [NSURL URLWithString:
-                              [NSString stringWithFormat:@"https://www.tumblr.com/oauth/authorize?oauth_token=%@",
-                               responseParameters[@"oauth_token"]]];
-
-            handleAuthURLBlock(authURL);
+            handleAuthURLBlock(responseParameters[@"oauth_token"]);
 
         } else {
             if (callback) {
@@ -107,12 +102,22 @@ NSDictionary *formEncodedDataToDictionary(NSData *data);
 #ifdef __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__
 
 - (void)authenticate:(NSString *)URLScheme fromViewController:(UIViewController *)fromViewController callback:(TMAuthenticationCallback)callback {
-    [self authenticate:URLScheme handleAuthURL:^(NSURL *authURL) {
-        SFSafariViewController *authController = [[SFSafariViewController alloc] initWithURL:authURL];
-        authController.modalPresentationStyle = UIModalPresentationOverFullScreen;
-        [authController performSelector:@selector(setDelegate:) withObject:self];
+    [self authenticate:URLScheme handleAuthURL:^(NSString *oauthToken) {
+        NSString* stringURL = [NSString stringWithFormat:@"tumblr-auth://x-callback-url/oauth/authorize?oauth_token=%@", oauthToken];
+        NSURL* url = [NSURL URLWithString:stringURL];
         
-        [fromViewController presentViewController:authController animated:YES completion:NULL];
+        if ([[UIApplication sharedApplication] canOpenURL:url]) {
+            [[UIApplication sharedApplication] openURL:url];
+        } else {
+            NSURL *authURL = [NSURL URLWithString:
+                              [NSString stringWithFormat:@"https://www.tumblr.com/oauth/authorize?oauth_token=%@", oauthToken]];
+            
+            SFSafariViewController *authController = [[SFSafariViewController alloc] initWithURL:authURL];
+            authController.modalPresentationStyle = UIModalPresentationOverFullScreen;
+            [authController performSelector:@selector(setDelegate:) withObject:self];
+            
+            [fromViewController presentViewController:authController animated:YES completion:NULL];
+        }
     } authCallback:^(NSString *token, NSString *secret, NSError *error) {
         dispatch_block_t performCallback = ^{
             if (callback) {
